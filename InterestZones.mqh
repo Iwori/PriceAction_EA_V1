@@ -17,26 +17,48 @@ int RegisterZone(ENUM_DIRECTION dir, ENUM_ZI_BASE base, double upper, double low
                  int bar_created_shift, datetime time_creator_dt, int pe_idx, bool incl_doji)
 {
    // Check for duplicate or merge with existing zone at same location
+   // Check ALL zones including mitigated/expired to prevent re-creation
    for(int i = 0; i < g_zi_count; i++)
    {
-      if(!g_zi_array[i].is_valid) continue;
       if(g_zi_array[i].direction != dir) continue;
       
-      // Same boundaries = same zone (merge PE+brake into BOTH)
-      if(MathAbs(g_zi_array[i].upper_price - upper) < g_point &&
-         MathAbs(g_zi_array[i].lower_price - lower) < g_point)
+      // For valid zones: compare current bounds
+      if(g_zi_array[i].is_valid)
       {
-         if(g_zi_array[i].base_type != base && base != ZI_BASE_BOTH)
-            g_zi_array[i].base_type = ZI_BASE_BOTH;
-         return i; // Already exists
+         if(MathAbs(g_zi_array[i].upper_price - upper) < g_point &&
+            MathAbs(g_zi_array[i].lower_price - lower) < g_point)
+         {
+            if(g_zi_array[i].base_type != base && base != ZI_BASE_BOTH)
+               g_zi_array[i].base_type = ZI_BASE_BOTH;
+            return i; // Already exists
+         }
+      }
+      
+      // For mitigated/expired zones: compare original bounds to prevent re-creation
+      if(!g_zi_array[i].is_valid &&
+         (g_zi_array[i].state == ZI_MITIGATED || g_zi_array[i].state == ZI_EXPIRED))
+      {
+         if(MathAbs(g_zi_array[i].original_upper - upper) < g_point &&
+            MathAbs(g_zi_array[i].original_lower - lower) < g_point)
+         {
+            return -1; // Zone existed and was mitigated/expired, do not re-create
+         }
       }
    }
    
    // Find free slot or expand
+   // IMPORTANT: only reuse slots that were Reset() or never used,
+   // NOT mitigated/expired slots (they hold dedup data)
    int idx = -1;
    for(int i = 0; i < g_zi_count; i++)
    {
-      if(!g_zi_array[i].is_valid) { idx = i; break; }
+      if(!g_zi_array[i].is_valid &&
+         g_zi_array[i].state != ZI_MITIGATED &&
+         g_zi_array[i].state != ZI_EXPIRED)
+      {
+         idx = i;
+         break;
+      }
    }
    if(idx < 0)
    {
@@ -61,7 +83,7 @@ int RegisterZone(ENUM_DIRECTION dir, ENUM_ZI_BASE base, double upper, double low
    g_zi_array[idx].time_created   = iTime(_Symbol, PERIOD_CURRENT, bar_created_shift);
    g_zi_array[idx].bar_creator    = bar_created_shift;
    g_zi_array[idx].time_creator   = time_creator_dt;
-   g_zi_array[idx].candles_alive  = bar_created_shift; // Zone already lived this many bars
+   g_zi_array[idx].candles_alive  = bar_created_shift;
    g_zi_array[idx].pe_index       = pe_idx;
    g_zi_array[idx].includes_doji  = incl_doji;
    
@@ -517,9 +539,6 @@ void UpdateMitigation()
       double z_upper = g_zi_array[i].upper_price;
       double z_lower = g_zi_array[i].lower_price;
       
-      // Check if bar[1] overlaps with zone
-      if(bar_low > z_upper || bar_high < z_lower) continue; // No overlap
-      
       // FIX Bug 5: Creator candle itself cannot mitigate its own zone
       if(bar_time == g_zi_array[i].time_creator) continue;
       
@@ -527,7 +546,6 @@ void UpdateMitigation()
       datetime next_after_creator = g_zi_array[i].time_creator + PeriodSeconds();
       if(bar_time == next_after_creator)
       {
-         // Next candle can only mitigate THIS zone if it closes below (bullish) or above (bearish)
          if(g_zi_array[i].direction == DIR_BULLISH)
          {
             if(bar_close >= z_lower) continue;
@@ -538,14 +556,11 @@ void UpdateMitigation()
          }
       }
       
-      // Calculate overlap
-      double overlap_top    = MathMin(bar_high, z_upper);
-      double overlap_bottom = MathMax(bar_low, z_lower);
-      
-      if(overlap_bottom > overlap_top) continue; // No real overlap
-      
-      // Complete mitigation: bar traverses entire zone
-      if(bar_low <= z_lower && bar_high >= z_upper)
+      // Complete mitigation: price penetrates through the zone
+      // Bullish zone: mitigated if bar low reaches at or below lower bound
+      // Bearish zone: mitigated if bar high reaches at or above upper bound
+      if((g_zi_array[i].direction == DIR_BULLISH && bar_low <= z_lower) ||
+         (g_zi_array[i].direction == DIR_BEARISH && bar_high >= z_upper))
       {
          g_zi_array[i].state = ZI_MITIGATED;
          g_zi_array[i].is_valid = false;
@@ -553,24 +568,28 @@ void UpdateMitigation()
          continue;
       }
       
+      // Check if bar[1] overlaps with zone (only needed for partial mitigation)
+      if(bar_low > z_upper || bar_high < z_lower) continue;
+      
+      // Calculate overlap
+      double overlap_top    = MathMin(bar_high, z_upper);
+      double overlap_bottom = MathMax(bar_low, z_lower);
+      
+      if(overlap_bottom > overlap_top) continue;
+      
       // Partial mitigation: shrink zone to untouched portion
       g_zi_array[i].state = ZI_PARTIAL;
       
       if(g_zi_array[i].direction == DIR_BULLISH)
       {
-         // Bullish zone is below price. Price enters from top.
-         // Mitigated part: from top down to bar_low
-         // Remaining: from zone_lower to bar_low
          if(bar_high >= z_upper && bar_low > z_lower)
          {
             g_zi_array[i].upper_price = bar_low;
          }
-         // Price enters from bottom (unusual for bullish, but possible)
          else if(bar_low <= z_lower && bar_high < z_upper)
          {
             g_zi_array[i].lower_price = bar_high;
          }
-         // Bar inside zone: keep larger untouched piece
          else if(bar_low > z_lower && bar_high < z_upper)
          {
             double top_piece = z_upper - bar_high;
@@ -583,19 +602,14 @@ void UpdateMitigation()
       }
       else // DIR_BEARISH
       {
-         // Bearish zone is above price. Price enters from bottom.
-         // Mitigated part: from bottom up to bar_high
-         // Remaining: from bar_high to zone_upper
          if(bar_low <= z_lower && bar_high < z_upper)
          {
             g_zi_array[i].lower_price = bar_high;
          }
-         // Price enters from top
          else if(bar_high >= z_upper && bar_low > z_lower)
          {
             g_zi_array[i].upper_price = bar_low;
          }
-         // Bar inside zone
          else if(bar_low > z_lower && bar_high < z_upper)
          {
             double top_piece = z_upper - bar_high;
@@ -634,16 +648,14 @@ void RunHistoricalMitigation()
       if(!g_zi_array[i].is_valid) continue;
       
       int created_shift = g_zi_array[i].bar_created;
-      if(created_shift <= 2) continue; // No historical bars to check
+      if(created_shift <= 2) continue;
       
       datetime creator_time = g_zi_array[i].time_creator;
       datetime next_after_creator = creator_time + PeriodSeconds();
       
-      // Process bars from (created_shift - 1) down to 2
-      // bar[1] was already handled by normal UpdateMitigation
       for(int s = created_shift - 1; s >= 2; s--)
       {
-         if(!g_zi_array[i].is_valid) break; // Already fully mitigated
+         if(!g_zi_array[i].is_valid) break;
          if(s >= available) continue;
          
          double bh = iHigh(_Symbol, PERIOD_CURRENT, s);
@@ -653,9 +665,6 @@ void RunHistoricalMitigation()
          
          double z_upper = g_zi_array[i].upper_price;
          double z_lower = g_zi_array[i].lower_price;
-         
-         // No overlap check
-         if(bl > z_upper || bh < z_lower) continue;
          
          // FIX Bug 5: Creator candle cannot mitigate its own zone
          if(bt == creator_time) continue;
@@ -673,14 +682,18 @@ void RunHistoricalMitigation()
             }
          }
          
-         // Complete mitigation
-         if(bl <= z_lower && bh >= z_upper)
+         // Complete mitigation: price penetrates through the zone
+         if((g_zi_array[i].direction == DIR_BULLISH && bl <= z_lower) ||
+            (g_zi_array[i].direction == DIR_BEARISH && bh >= z_upper))
          {
             g_zi_array[i].state = ZI_MITIGATED;
             g_zi_array[i].is_valid = false;
             g_logger.LogZone("HIST_MITIGATED_FULL", i, g_zi_array[i]);
             break;
          }
+         
+         // No overlap check (only needed for partial mitigation)
+         if(bl > z_upper || bh < z_lower) continue;
          
          // Partial mitigation
          g_zi_array[i].state = ZI_PARTIAL;

@@ -40,10 +40,12 @@ void DrawInterestZones()
       if(!g_zi_array[i].is_valid)
       {
          // Remove dead zone objects
-         if(ObjectFind(0, name) >= 0)
+         if(ObjectFind(0, name) >= 0) {
             ObjectDelete(0, name);
+            Print(name);
+            }
          string lbl = name + "_lbl";
-         if(ObjectFind(0, lbl) >= 0)
+         if(ObjectFind(0, lbl) >= 0) 
             ObjectDelete(0, lbl);
          continue;
       }
