@@ -73,15 +73,27 @@ void TryPattern2Formation(int close_shift, int doji_shift, int eng_shift)
    bool wick_exception = false;
    if(zi_idx < 0)
    {
-      // FIX 1: Wick exception now requires a real mitigated zone
       int mitigated_zi_idx = -1;
       wick_exception = CheckP2WickException(close_shift, zi_dir, close_price, mitigated_zi_idx);
       
-      if(!wick_exception) return; // No zone and no valid wick exception → no pattern
+      if(!wick_exception)
+      {
+         // NO zone and NO wick exception → NO pattern 2
+         g_logger.LogDecision(StringFormat("P2|NOZONE|%s|bar%d|%.1f",
+            (trade_dir == TRADE_LONG) ? "L" : "S", close_shift, close_price));
+         return;
+      }
       
-      // Use the real mitigated zone index for reference
+      // Wick exception valid: use the mitigated zone
       zi_idx = mitigated_zi_idx;
       g_logger.LogDecision(StringFormat("DW|%d|%.1f|zi#%d", close_shift, close_price, zi_idx));
+   }
+   else
+   {
+      // Zone found: log for diagnostics
+      g_logger.LogDecision(StringFormat("P2|ZONE_OK|%s|bar%d|zi#%d|%.1f-%.1f",
+         (trade_dir == TRADE_LONG) ? "L" : "S", close_shift, zi_idx,
+         g_zi_array[zi_idx].lower_price, g_zi_array[zi_idx].upper_price));
    }
    
    // Pattern 2 confirmed! Now analyze

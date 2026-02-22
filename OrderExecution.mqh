@@ -93,6 +93,28 @@ void TryExecutePattern(int pat_idx)
 {
    if(!g_patterns[pat_idx].is_valid) return;
    
+   // [v3] MONOTASK SAFETY: re-verify no position is open before ANY action
+   if(g_context.is_busy) return;
+   
+   // [v3] Double-check: scan actual positions (catches out-of-sync edge cases)
+   for(int p = 0; p < PositionsTotal(); p++)
+   {
+      if(!position_info.SelectByIndex(p)) continue;
+      if(position_info.Symbol() != _Symbol) continue;
+      if(position_info.Magic() != inpMagicNumber) continue;
+      
+      // Position exists! Sync and abort
+      g_context.is_busy = true;
+      g_context.active_ticket = position_info.Ticket();
+      g_context.active_direction = (position_info.PositionType() == POSITION_TYPE_BUY) ? 
+                                    TRADE_LONG : TRADE_SHORT;
+      g_context.entry_price_active = position_info.PriceOpen();
+      g_context.sl_price_active    = position_info.StopLoss();
+      g_context.tp_price_active    = position_info.TakeProfit();
+      g_logger.LogDecision(StringFormat("MONO_BLOCK|#%I64u", position_info.Ticket()));
+      return;
+   }
+   
    // 13-candle wait: don't place orders yet, but pattern stays valid
    if(g_context.is_waiting_after_loss)
    {
@@ -164,6 +186,7 @@ void TryExecutePattern(int pat_idx)
    // Place new order (only if no active position — monotask rule)
    if(g_patterns[pat_idx].state == PAT_CONFIRMED)
    {
+      // [v3] Final monotask gate before placing order
       if(g_context.is_busy)
       {
          // Position already open, don't place new orders

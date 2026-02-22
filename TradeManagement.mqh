@@ -627,6 +627,29 @@ void PrioritizeAndExecute()
    // Monotask check: if position open, only manage it, no new entries
    if(g_context.is_busy) return;
    
+   // ADDITIONAL SAFETY: verify no position exists with our magic number
+   // (catches cases where is_busy got out of sync)
+   for(int i = 0; i < PositionsTotal(); i++)
+   {
+      if(!position_info.SelectByIndex(i)) continue;
+      if(position_info.Symbol() != _Symbol) continue;
+      if(position_info.Magic() != inpMagicNumber) continue;
+      
+      // Found an active position we didn't know about — sync context
+      g_context.is_busy = true;
+      g_context.active_ticket = position_info.Ticket();
+      g_context.active_direction = (position_info.PositionType() == POSITION_TYPE_BUY) ? 
+                                    TRADE_LONG : TRADE_SHORT;
+      g_context.entry_price_active = position_info.PriceOpen();
+      g_context.sl_price_active    = position_info.StopLoss();
+      g_context.tp_price_active    = position_info.TakeProfit();
+      
+      g_logger.LogDecision(StringFormat("MONO_SYNC|#%I64u|%s",
+         g_context.active_ticket,
+         (g_context.active_direction == TRADE_LONG) ? "L" : "S"));
+      return; // Position found, don't place new orders
+   }
+   
    // Collect valid confirmed patterns by direction
    int long_indices[];
    int short_indices[];
@@ -660,9 +683,19 @@ void PrioritizeAndExecute()
    CancelNonSelected(short_indices, short_count, best_short);
    
    // Try to place/manage the selected patterns
+   // CRITICAL: Re-check g_context.is_busy after EACH execution attempt
+   // because a market order could fill immediately
    if(best_long >= 0)
+   {
       TryExecutePattern(best_long);
+   }
+   
+   // MONOTASK GATE: If the long order just opened a position, don't try short
+   if(g_context.is_busy) return;
+   
    if(best_short >= 0)
+   {
       TryExecutePattern(best_short);
+   }
 }
 //+------------------------------------------------------------------+

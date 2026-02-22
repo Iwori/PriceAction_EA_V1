@@ -346,25 +346,62 @@ bool CheckBrakeBodyRule(int first_shift, int &brake_shifts[], int brake_count, E
    
    ENUM_CANDLE_TYPE prev_type = GetCandleType(prev_shift);
    
-   // If prev is Doji, look one more to the left (rule 4)
+   // If prev is Doji, look one more to the left
    if(prev_type == CANDLE_DOJI)
    {
       prev_shift = first_shift + 2;
       if(prev_shift >= available_bars) return true;
       prev_type = GetCandleType(prev_shift);
-      if(prev_type == CANDLE_DOJI) return true; // Two Dogis, no limit
+      if(prev_type == CANDLE_DOJI) return true; // Two Dojis, no restriction
    }
    
    ENUM_CANDLE_TYPE first_type = (dir == DIR_BULLISH) ? CANDLE_BULLISH : CANDLE_BEARISH;
    
-   // Rule 3: If prev is same direction as first candle → no limit
+   // If prev is SAME direction as first candle → no restrictions at all
    if(prev_type == first_type) return true;
    
-   // Rule 1 & 2: Prev is opposite direction → check 1.5x limit
+   // === Prev is OPPOSITE direction → apply all restrictions ===
+   
+   // --- [v3] RULE 1: First candle must BREAK previous candle completely ---
+   // Bullish ZI: first candle (bullish) must close ABOVE previous (bearish) HIGH
+   // Bearish ZI: first candle (bearish) must close BELOW previous (bullish) LOW
+   double first_close = iClose(_Symbol, PERIOD_CURRENT, first_shift);
+   
+   if(dir == DIR_BULLISH)
+   {
+      double prev_high = iHigh(_Symbol, PERIOD_CURRENT, prev_shift);
+      if(first_close <= prev_high)
+      {
+         g_logger.LogDecision(StringFormat("KR|NOBREAK|B|bar%d|fc=%.1f|ph=%.1f",
+            first_shift, first_close, prev_high));
+         return false; // First bullish candle didn't break above previous bearish high
+      }
+   }
+   else // DIR_BEARISH
+   {
+      double prev_low = iLow(_Symbol, PERIOD_CURRENT, prev_shift);
+      if(first_close >= prev_low)
+      {
+         g_logger.LogDecision(StringFormat("KR|NOBREAK|R|bar%d|fc=%.1f|pl=%.1f",
+            first_shift, first_close, prev_low));
+         return false; // First bearish candle didn't break below previous bullish low
+      }
+   }
+   
+   // --- [v3] RULE 2: First candle body cannot exceed 150% of previous candle body ---
    double first_body = GetBodySize(first_shift);
+   double prev_body  = GetBodySize(prev_shift);
+   
+   if(prev_body > 0 && first_body > prev_body * 1.5)
+   {
+      g_logger.LogDecision(StringFormat("KR|150%%|bar%d|fb=%.1f|pb=%.1f|%.2f%%",
+         first_shift, first_body, prev_body, (first_body / prev_body) * 100));
+      return false; // First candle too large relative to previous
+   }
+   
+   // --- EXISTING RULE 3: Brake body sum / first candle body > 1.5 → reject ---
    if(first_body == 0) return true; // Avoid division by zero
    
-   // Sum brake candle bodies
    double brake_body_sum = 0;
    for(int i = 0; i < brake_count; i++)
       brake_body_sum += GetBodySize(brake_shifts[i]);
@@ -373,7 +410,7 @@ bool CheckBrakeBodyRule(int first_shift, int &brake_shifts[], int brake_count, E
    
    if(ratio > 1.5)
    {
-      g_logger.LogDecision(StringFormat("KR|%.2f|%d", ratio, first_shift));
+      g_logger.LogDecision(StringFormat("KR|RATIO|%.2f|bar%d", ratio, first_shift));
       return false;
    }
    
@@ -647,13 +684,22 @@ void RunHistoricalMitigation()
    {
       if(!g_zi_array[i].is_valid) continue;
       
+      // Determine scan range: from bar AFTER creator to bar[1]
+      // (bar[1] is the last closed bar — it MUST be checked)
       int created_shift = g_zi_array[i].bar_created;
-      if(created_shift <= 2) continue;
+      
+      // Safety: if bar_created is invalid or beyond available bars, skip
+      if(created_shift < 0 || created_shift >= available) continue;
+      
+      // If zone was just created on bar[1] or bar[0], nothing to retrocheck
+      if(created_shift <= 1) continue;
       
       datetime creator_time = g_zi_array[i].time_creator;
       datetime next_after_creator = creator_time + PeriodSeconds();
       
-      for(int s = created_shift - 1; s >= 2; s--)
+      // Scan from the bar right after creation all the way down to bar[1]
+      // Previous version stopped at s >= 2, missing bar[1] entirely
+      for(int s = created_shift - 1; s >= 1; s--)
       {
          if(!g_zi_array[i].is_valid) break;
          if(s >= available) continue;
@@ -666,10 +712,10 @@ void RunHistoricalMitigation()
          double z_upper = g_zi_array[i].upper_price;
          double z_lower = g_zi_array[i].lower_price;
          
-         // FIX Bug 5: Creator candle cannot mitigate its own zone
+         // Creator candle cannot mitigate its own zone
          if(bt == creator_time) continue;
          
-         // "Next candle after creator" rule
+         // "Next candle after creator" rule (spec 2.4.3)
          if(bt == next_after_creator)
          {
             if(g_zi_array[i].direction == DIR_BULLISH)
@@ -692,10 +738,10 @@ void RunHistoricalMitigation()
             break;
          }
          
-         // No overlap check (only needed for partial mitigation)
+         // No overlap → skip
          if(bl > z_upper || bh < z_lower) continue;
          
-         // Partial mitigation
+         // Partial mitigation: shrink zone to untouched portion
          g_zi_array[i].state = ZI_PARTIAL;
          
          if(g_zi_array[i].direction == DIR_BULLISH)
@@ -714,7 +760,7 @@ void RunHistoricalMitigation()
                   g_zi_array[i].lower_price = bh;
             }
          }
-         else
+         else // DIR_BEARISH
          {
             if(bl <= z_lower && bh < z_upper)
                g_zi_array[i].lower_price = bh;
@@ -731,7 +777,7 @@ void RunHistoricalMitigation()
             }
          }
          
-         // Check if remaining zone too small
+         // Check if remaining zone is too small
          if(g_zi_array[i].upper_price - g_zi_array[i].lower_price < g_point)
          {
             g_zi_array[i].state = ZI_MITIGATED;
@@ -742,11 +788,29 @@ void RunHistoricalMitigation()
       }
    }
    
+   // === GHOST ZONE CLEANUP ===
+   // Additional pass: invalidate any zone whose bar_created exceeds
+   // the expiration window. Deep scan can create zones that are already
+   // too old but weren't caught by UpdateZoneExpiration() yet.
+   for(int i = 0; i < g_zi_count; i++)
+   {
+      if(!g_zi_array[i].is_valid) continue;
+      
+      int age = g_zi_array[i].bar_created; // bar_created is the shift at creation time
+      // During deep scan, candles_alive is initialized to bar_created shift
+      // which represents how many bars ago the zone was born
+      if(age >= inpZoneExpireCandles)
+      {
+         g_zi_array[i].state = ZI_EXPIRED;
+         g_zi_array[i].is_valid = false;
+         g_logger.LogZone("HIST_EXPIRED", i, g_zi_array[i]);
+      }
+   }
+   
    // Rebuild grand zones after historical mitigation
    BuildGrandZones();
    
-   g_logger.LogDecision(StringFormat("hist_done|%d",
-      CountValidZones()));
+   g_logger.LogDecision(StringFormat("hist_done|%d", CountValidZones()));
 }
 
 //+------------------------------------------------------------------+

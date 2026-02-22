@@ -175,6 +175,7 @@ int OnInit()
    if(g_logger.IsActive())
       Print("Debug log file: ", g_logger.GetFilename(), " (Common\\Files)");
    
+   ChartRedraw();
    return INIT_SUCCEEDED;
 }
 
@@ -204,6 +205,7 @@ void OnDeinit(const int reason)
    g_logger.Close();
    
    Print(EA_NAME, " removed from ", _Symbol);
+   ChartRedraw();
 }
 
 //+------------------------------------------------------------------+
@@ -249,23 +251,29 @@ void OnTick()
    //=== PHASE 2: Detect Structural Points ===
    DetectStructuralPoints();
    
-   //=== PHASE 3: Detect Interest Zones ===
+   //=== PHASE 3a: Detect Interest Zones (creation) ===
    DetectZonesPE();
    DetectZonesBrake();
    ProcessBrakePending();
-   UpdateMitigation();
-   BuildGrandZones();
    
-   // On first bar, run historical mitigation for zones created by deep scan
+   // On first bar, run historical mitigation BEFORE pattern detection
+   // so deep-scan zones that should be dead don't trigger false patterns
    if(g_bar_count == 1)
       RunHistoricalMitigation();
    
-   //=== PHASE 4: Detect Pattern 2 ===
+   // Build grand zones for pattern detection
+   BuildGrandZones();
+   
+   //=== PHASE 4: Detect Pattern 2 (BEFORE mitigation) ===
    DetectPattern2();
    
-   //=== PHASE 5: Detect Pattern 3 ===
+   //=== PHASE 5: Detect Pattern 3 (BEFORE mitigation) ===
    DetectPattern3();
    UpdatePendingPattern3();
+   
+   //=== PHASE 3b: NOW apply mitigation for future bars ===
+   UpdateMitigation();
+   BuildGrandZones(); // Rebuild after mitigation changes bounds
    
    //=== PHASE 6: Manage open trades ===
    ManageBreakeven();

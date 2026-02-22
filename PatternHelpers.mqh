@@ -149,23 +149,44 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
    
    if(bar_prev2 >= available) return -1;
    
-   // Search ALL zones (including mitigated) for one that:
-   // 1. Matches direction
-   // 2. Original bounds cover close_price
-   // 3. Is mitigated or partially mitigated (not expired)
-   // 4. Was mitigated by wicks (not bodies) of the 2 prior bars
+   datetime time_prev2 = iTime(_Symbol, PERIOD_CURRENT, bar_prev2);
    
+   // Search mitigated zones for wick exception candidates
    for(int i = 0; i < g_zi_count; i++)
    {
       if(g_zi_array[i].direction != zi_dir) continue;
       
-      // Must be mitigated or partial (not expired, not still fully active)
+      // Only MITIGATED or PARTIAL — NOT expired, NOT active (active zones
+      // should be found by FindZoneAtClose, not wick exception)
       if(g_zi_array[i].state != ZI_MITIGATED && g_zi_array[i].state != ZI_PARTIAL) continue;
+      
+      // Recency check 1: zone must have been created BEFORE bar_prev2
+      // (it had to exist when those bars were forming)
+      if(g_zi_array[i].time_created > time_prev2) continue;
+      
+      // Recency check 2: reject very old zones
+      // If the zone would have expired by now, it shouldn't qualify
+      int zone_age_bars = iBarShift(_Symbol, PERIOD_CURRENT, g_zi_array[i].time_created);
+      if(zone_age_bars < 0 || zone_age_bars > inpZoneExpireCandles + 10) continue;
       
       // Original bounds must cover close_price
       if(close_price < g_zi_array[i].original_lower || close_price > g_zi_array[i].original_upper) continue;
       
-      // Verify: the 2 bars before close_bar have WICK (not body) at close_price level
+      // Verify: bar_prev1 and bar_prev2 must actually ENTER the zone's original range
+      // (at least one of them must overlap with original bounds)
+      double prev1_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev1);
+      double prev1_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev1);
+      double prev2_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev2);
+      double prev2_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev2);
+      
+      bool prev1_overlaps = (prev1_low <= g_zi_array[i].original_upper && 
+                             prev1_high >= g_zi_array[i].original_lower);
+      bool prev2_overlaps = (prev2_low <= g_zi_array[i].original_upper && 
+                             prev2_high >= g_zi_array[i].original_lower);
+      
+      if(!prev1_overlaps && !prev2_overlaps) continue;
+      
+      // Now verify: the 2 bars before close_bar have WICK (not body) at close_price
       bool has_wick_at_level = false;
       bool body_at_level = false;
       
@@ -176,7 +197,7 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
          double bar_high    = iHigh(_Symbol, PERIOD_CURRENT, b);
          double bar_low     = iLow(_Symbol, PERIOD_CURRENT, b);
          
-         // Check if body crosses close_price → disqualifies
+         // Body crosses close_price → disqualifies entire exception
          if(close_price >= body_bottom && close_price <= body_top)
          {
             body_at_level = true;
@@ -200,7 +221,11 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
       
       // Only valid if wick touched but body didn't
       if(has_wick_at_level && !body_at_level)
+      {
+         g_logger.LogDecision(StringFormat("WE|zi#%d|%s|age%d|%.1f",
+            i, (zi_dir == DIR_BULLISH) ? "B" : "R", zone_age_bars, close_price));
          return i;
+      }
    }
    
    return -1;
