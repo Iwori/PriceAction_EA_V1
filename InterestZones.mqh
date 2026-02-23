@@ -230,18 +230,8 @@ void TryBrakeFormation(int last_shift, ENUM_DIRECTION dir)
       datetime t_first = iTime(_Symbol, PERIOD_CURRENT, first_shift);
       datetime t_last  = iTime(_Symbol, PERIOD_CURRENT, last_shift);
       
-      // Dedup check FIRST: already registered, pending, or rejected?
-      if(IsBrakeAlreadyProcessed(t_first, t_last, dir)) continue;
-      
-      // Check 1.5x body rule (condition from page 7)
-      if(!CheckBrakeBodyRule(first_shift, brake_shifts, brake_len, dir))
-      {
-         // Register as rejected so we don't re-check every bar
-         AddBrakeRejected(dir, t_first, t_last);
-         continue;
-      }
-      
-      // Calculate brake candle extremes
+      // FIX: Calculate brake candle extremes BEFORE dedup check
+      // so we can compare zone bounds against existing zones
       double brake_high = 0, brake_low = DBL_MAX;
       double brake_close_min = DBL_MAX, brake_close_max = 0;
       
@@ -258,6 +248,17 @@ void TryBrakeFormation(int last_shift, ENUM_DIRECTION dir)
       // Zone boundaries = brake candles range (wicks included)
       double zone_upper = brake_high;
       double zone_lower = brake_low;
+      
+      // Dedup check: already registered, pending, or rejected?
+      if(IsBrakeAlreadyProcessed(t_first, t_last, dir, zone_upper, zone_lower)) continue;
+      
+      // Check 1.5x body rule (condition from page 7)
+      if(!CheckBrakeBodyRule(first_shift, brake_shifts, brake_len, dir))
+      {
+         // Register as rejected so we don't re-check every bar
+         AddBrakeRejected(dir, t_first, t_last);
+         continue;
+      }
       
       // Check immediate confirmation (break)
       double close_last = iClose(_Symbol, PERIOD_CURRENT, last_shift);
@@ -317,10 +318,12 @@ bool ValidateBrakePattern(int &shifts[], int count, ENUM_CANDLE_TYPE expected_br
    }
    else if(count == 2)
    {
-      // Valid patterns: doji+brake, brake+doji, brake+brake
+      // FIX: Per Eduardo (video feedback min 3:05): with 2 brake candles,
+      // at least one MUST be a doji. Pure brake+brake is NOT valid.
+      // Valid patterns: doji+brake, brake+doji
       if(types[0] == CANDLE_DOJI && types[1] == expected_brake) return true;
       if(types[0] == expected_brake && types[1] == CANDLE_DOJI) return true;
-      if(types[0] == expected_brake && types[1] == expected_brake) return true;
+      // REMOVED: brake+brake without doji
       return false;
    }
    else // count == 3
@@ -419,15 +422,25 @@ bool CheckBrakeBodyRule(int first_shift, int &brake_shifts[], int brake_count, E
 
 //+------------------------------------------------------------------+
 //| Check if a brake formation was already processed                    |
+//| Now also compares zone bounds for pending brakes confirmed later    |
 //+------------------------------------------------------------------+
-bool IsBrakeAlreadyProcessed(datetime t_first, datetime t_last, ENUM_DIRECTION dir)
+bool IsBrakeAlreadyProcessed(datetime t_first, datetime t_last, ENUM_DIRECTION dir,
+                              double zone_upper, double zone_lower)
 {
    // Check existing zones (including mitigated/expired to avoid re-creating)
    for(int i = 0; i < g_zi_count; i++)
    {
       if(g_zi_array[i].direction != dir) continue;
       if(g_zi_array[i].base_type == ZI_BASE_PE) continue; // Only check brake/both
+      
+      // Match by time (works for immediately confirmed brakes)
       if(g_zi_array[i].time_created == t_last) return true;
+      
+      // FIX: Match by original bounds (works for pending brakes confirmed later,
+      // where time_created = confirming bar ≠ t_last)
+      if(MathAbs(g_zi_array[i].original_upper - zone_upper) < g_point &&
+         MathAbs(g_zi_array[i].original_lower - zone_lower) < g_point)
+         return true;
    }
    
    // Check ALL pending brakes (including invalidated/confirmed)
@@ -435,8 +448,13 @@ bool IsBrakeAlreadyProcessed(datetime t_first, datetime t_last, ENUM_DIRECTION d
    {
       if(g_brake_pending[i].direction != dir) continue;
       if(g_brake_pending[i].time_first == t_first &&
-         g_brake_pending[i].time_last == t_last) return true;
+         g_brake_pending[i].time_last  == t_last)
+         return true;
    }
+   
+   // Check rejected brakes
+   // (rejected entries have is_valid=false but still have time_first/time_last set)
+   // Already covered by loop above since we don't filter by is_valid
    
    return false;
 }
