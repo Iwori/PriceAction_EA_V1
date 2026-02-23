@@ -128,13 +128,26 @@ void DrawStructuralPoints()
          continue;
       }
       
-      color pe_clr = (g_pe_array[i].pe_type == PE_STRICT) ? inpPeStrictColor : inpPeNormalColor;
-      int arrow_code = (g_pe_array[i].direction == DIR_BULLISH) ? 233 : 234; // Up/Down arrow
+      // Safety net: force-expire PEs older than zone expiration window.
+      // Catches edge cases where UpdateZoneExpiration missed them
+      // (deep scan PEs, slot reuse race conditions).
+      int pe_age = iBarShift(_Symbol, PERIOD_CURRENT, g_pe_array[i].time_created);
+      if(pe_age < 0 || pe_age > inpZoneExpireCandles)
+      {
+         g_pe_array[i].is_valid = false;
+         if(ObjectFind(0, name) >= 0) ObjectDelete(0, name);
+         if(ObjectFind(0, line_name) >= 0) ObjectDelete(0, line_name);
+         continue;
+      }
+      
+      color pe_clr = (g_pe_array[i].pe_type == PE_STRICT) ?
+                      inpPeStrictColor : inpPeNormalColor;
+      int arrow_code = (g_pe_array[i].direction == DIR_BULLISH) ? 233 : 234;
       
       datetime pe_time = g_pe_array[i].time_last;
       double pe_level  = g_pe_array[i].level;
       
-      // FIX Bug 11: Place arrow OUTSIDE the wick extremes, not at PE level
+      // Place arrow OUTSIDE the wick extremes, not at PE level
       double arrow_offset = GetIndicatorValue(1) * 0.15;
       if(arrow_offset <= 0) arrow_offset = g_point * 20;
       
@@ -158,7 +171,7 @@ void DrawStructuralPoints()
       ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
       ObjectSetInteger(0, name, OBJPROP_BACK, false);
       
-      // FIX Bug 10: Short fixed-length line instead of extending to current bar
+      // Short fixed-length line
       datetime line_end = pe_time + PeriodSeconds() * PE_LINE_BARS;
       
       if(ObjectFind(0, line_name) < 0)
@@ -201,7 +214,14 @@ void DrawPatterns()
       string fib0_name  = prefix + "_fib0";
       string fib100_name= prefix + "_fib100";
       
-      // FIX Bug 13: Only draw patterns in drawable states
+      // Safety net: orphaned ACTIVE patterns with no open position
+      if(g_patterns[i].state == PAT_ACTIVE && !g_context.is_busy)
+      {
+         g_patterns[i].state = PAT_CLOSED;
+         g_patterns[i].is_valid = false;
+      }
+      
+      // Only draw patterns in drawable states
       bool should_draw = g_patterns[i].is_valid &&
                          (g_patterns[i].state == PAT_CONFIRMED ||
                           g_patterns[i].state == PAT_PENDING ||
@@ -216,7 +236,7 @@ void DrawPatterns()
          ObjectDelete(0, fib0_name);
          ObjectDelete(0, fib100_name);
          
-         // FIX Bug 13: Ensure terminal states are marked invalid
+         // Ensure terminal states are marked invalid
          // so their slot can be reused and objects stay deleted
          if(g_patterns[i].state == PAT_CANCELLED || g_patterns[i].state == PAT_CLOSED)
             g_patterns[i].is_valid = false;

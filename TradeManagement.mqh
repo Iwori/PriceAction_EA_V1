@@ -213,13 +213,18 @@ double FindLatestFriendlyZILevel(ENUM_DIRECTION dir, bool is_buy)
 
 //+------------------------------------------------------------------+
 //| Find penultimate friendly ZI level (skip most recent)              |
+//| "Penultimate" = second-to-last formed ZI that is between           |
+//|  entry and current price (profitable side only)                    |
 //+------------------------------------------------------------------+
 double FindPenultimateFriendlyZILevel(ENUM_DIRECTION dir, bool is_buy)
 {
-   // Collect all valid friendly ZI sorted by creation time
+   // Collect all valid friendly ZI on the profitable side
    datetime times[];
    double levels[];
    int count = 0;
+   
+   double current_price = is_buy ? GetBid() : GetAsk();
+   double entry = g_context.entry_price_active;
    
    for(int i = 0; i < g_zi_count; i++)
    {
@@ -227,9 +232,8 @@ double FindPenultimateFriendlyZILevel(ENUM_DIRECTION dir, bool is_buy)
       if(g_zi_array[i].direction != dir) continue;
       
       double level = is_buy ? g_zi_array[i].lower_price : g_zi_array[i].upper_price;
-      double current_price = is_buy ? GetBid() : GetAsk();
       
-      // Must be on the profitable side
+      // Must be on the profitable side of current price
       if(is_buy && level > current_price) continue;
       if(!is_buy && level < current_price) continue;
       
@@ -242,7 +246,7 @@ double FindPenultimateFriendlyZILevel(ENUM_DIRECTION dir, bool is_buy)
    
    if(count < 2) return 0; // Not enough zones for penultimate
    
-   // Sort by time descending (bubble sort, small arrays)
+   // Sort by time descending (most recent first)
    for(int a = 0; a < count - 1; a++)
    {
       for(int b = a + 1; b < count; b++)
@@ -255,7 +259,7 @@ double FindPenultimateFriendlyZILevel(ENUM_DIRECTION dir, bool is_buy)
       }
    }
    
-   // Return penultimate (index 1)
+   // Return penultimate (index 1 = second most recent)
    return levels[1];
 }
 
@@ -302,16 +306,21 @@ void CountStrictPESinceEntry()
    ENUM_DIRECTION friendly = (g_context.active_direction == TRADE_LONG) ? DIR_BULLISH : DIR_BEARISH;
    int count = 0;
    
-   // Count PE created after position was opened
+   // Get actual position open time
+   datetime entry_time = 0;
+   if(PositionSelectByTicket(g_context.active_ticket))
+      entry_time = (datetime)PositionGetInteger(POSITION_TIME);
+   
+   if(entry_time == 0) entry_time = g_context.last_daily_reset; // Fallback
+   
    for(int i = 0; i < g_pe_count; i++)
    {
       if(!g_pe_array[i].is_valid) continue;
       if(g_pe_array[i].direction != friendly) continue;
       if(g_pe_array[i].pe_type != PE_STRICT) continue;
       
-      // PE must be formed after position entry time
-      // Use position open time from context
-      if(g_pe_array[i].time_created > g_context.last_daily_reset) // Approximate: after today start
+      // PE must be formed AFTER position was opened
+      if(g_pe_array[i].time_created > entry_time)
          count++;
    }
    
@@ -392,6 +401,21 @@ void HandlePositionClosed()
    
    g_logger.LogTrade("POSITION_CLOSED", ticket, StringFormat("%.2f", profit));
    
+   // FIX: Invalidate the pattern that was driving this position.
+   // Without this, the pattern stays in PAT_ACTIVE forever and its
+   // entry/SL/TP lines accumulate on the chart indefinitely.
+   for(int i = 0; i < g_pat_count; i++)
+   {
+      if(!g_patterns[i].is_valid) continue;
+      if(g_patterns[i].state == PAT_ACTIVE && g_patterns[i].ticket == ticket)
+      {
+         g_patterns[i].state = PAT_CLOSED;
+         g_patterns[i].is_valid = false;
+         g_logger.LogPattern("CLOSED", i, g_patterns[i]);
+         break;
+      }
+   }
+   
    // Reset trade context
    g_context.is_busy = false;
    g_context.active_ticket = 0;
@@ -408,9 +432,6 @@ void HandlePositionClosed()
       
       g_logger.LogDecision(StringFormat("$L|%.2f|%d",
          profit, inpWaitCandlesAfterLoss));
-      
-      // Cancel patterns that should have been entered during the wait
-      // They'll be filtered by PrioritizeAndExecute()
       
       NotifyUser(StringFormat("Position closed with loss (%.2f). Waiting %d candles.",
          profit, inpWaitCandlesAfterLoss));

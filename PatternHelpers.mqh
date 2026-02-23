@@ -137,8 +137,9 @@ double GetP3SLFibLevel(double ratio)
 }
 
 //+------------------------------------------------------------------+
-//| Find a mitigated zone whose ORIGINAL bounds cover close_price      |
+//| Find mitigated zone whose ORIGINAL bounds cover close_price        |
 //| Used by wick exception: the zone was mitigated but only by wicks   |
+//| of the 2 candles immediately before the close candle               |
 //| Returns zone index or -1                                           |
 //+------------------------------------------------------------------+
 int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir, double close_price)
@@ -151,34 +152,52 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
    
    datetime time_prev2 = iTime(_Symbol, PERIOD_CURRENT, bar_prev2);
    
-   // Search mitigated zones for wick exception candidates
+   // Pre-fetch bar data for prev1 and prev2
+   double prev1_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev1);
+   double prev1_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev1);
+   double prev2_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev2);
+   double prev2_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev2);
+   
    for(int i = 0; i < g_zi_count; i++)
    {
       if(g_zi_array[i].direction != zi_dir) continue;
       
-      // Only MITIGATED or PARTIAL — NOT expired, NOT active (active zones
-      // should be found by FindZoneAtClose, not wick exception)
-      if(g_zi_array[i].state != ZI_MITIGATED && g_zi_array[i].state != ZI_PARTIAL) continue;
+      // FIX 1: Only FULLY MITIGATED zones qualify for wick exception.
+      // ZI_PARTIAL zones are still valid with reduced bounds — if close_price
+      // falls outside those bounds, it means close is in the mitigated portion,
+      // which is NOT a valid "close in zone". Allowing ZI_PARTIAL here was
+      // the root cause of false P2/P3 detections.
+      if(g_zi_array[i].state != ZI_MITIGATED) continue;
       
       // Recency check 1: zone must have been created BEFORE bar_prev2
-      // (it had to exist when those bars were forming)
       if(g_zi_array[i].time_created > time_prev2) continue;
       
       // Recency check 2: reject very old zones
-      // If the zone would have expired by now, it shouldn't qualify
       int zone_age_bars = iBarShift(_Symbol, PERIOD_CURRENT, g_zi_array[i].time_created);
       if(zone_age_bars < 0 || zone_age_bars > inpZoneExpireCandles + 10) continue;
       
       // Original bounds must cover close_price
       if(close_price < g_zi_array[i].original_lower || close_price > g_zi_array[i].original_upper) continue;
       
-      // Verify: bar_prev1 and bar_prev2 must actually ENTER the zone's original range
-      // (at least one of them must overlap with original bounds)
-      double prev1_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev1);
-      double prev1_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev1);
-      double prev2_high = iHigh(_Symbol, PERIOD_CURRENT, bar_prev2);
-      double prev2_low  = iLow(_Symbol, PERIOD_CURRENT, bar_prev2);
+      // FIX 2: Verify that bar_prev1 or bar_prev2 actually CAUSED the mitigation.
+      // The spec says "zone recently mitigated by wicks of the 2 previous candles".
+      // If the zone was mitigated by a different bar, wick exception doesn't apply.
+      bool prev1_caused = false, prev2_caused = false;
+      if(zi_dir == DIR_BULLISH)
+      {
+         // Bullish zone: full mitigation = bar low <= original lower
+         prev1_caused = (prev1_low <= g_zi_array[i].original_lower);
+         prev2_caused = (prev2_low <= g_zi_array[i].original_lower);
+      }
+      else
+      {
+         // Bearish zone: full mitigation = bar high >= original upper
+         prev1_caused = (prev1_high >= g_zi_array[i].original_upper);
+         prev2_caused = (prev2_high >= g_zi_array[i].original_upper);
+      }
+      if(!prev1_caused && !prev2_caused) continue;
       
+      // At least one of prev1/prev2 overlaps with original bounds
       bool prev1_overlaps = (prev1_low <= g_zi_array[i].original_upper && 
                              prev1_high >= g_zi_array[i].original_lower);
       bool prev2_overlaps = (prev2_low <= g_zi_array[i].original_upper && 
@@ -186,7 +205,7 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
       
       if(!prev1_overlaps && !prev2_overlaps) continue;
       
-      // Now verify: the 2 bars before close_bar have WICK (not body) at close_price
+      // Verify: the 2 bars have WICK (not body) at close_price level
       bool has_wick_at_level = false;
       bool body_at_level = false;
       
@@ -207,13 +226,11 @@ int FindMitigatedZoneForWickException(int close_bar_shift, ENUM_DIRECTION zi_dir
          // Check if wick reaches close_price
          if(zi_dir == DIR_BULLISH)
          {
-            // Bullish ZI below: wick goes down into zone
             if(close_price >= bar_low && close_price < body_bottom)
                has_wick_at_level = true;
          }
          else
          {
-            // Bearish ZI above: wick goes up into zone
             if(close_price <= bar_high && close_price > body_top)
                has_wick_at_level = true;
          }

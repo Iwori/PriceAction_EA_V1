@@ -254,7 +254,10 @@ void OnTick()
    //=== PHASE 3a: Detect Interest Zones (creation) ===
    DetectZonesPE();
    DetectZonesBrake();
-   ProcessBrakePending();
+   if(g_bar_count == 1)
+      ProcessBrakePendingHistorical();
+   else
+      ProcessBrakePending();
    
    // On first bar, run historical mitigation BEFORE pattern detection
    // so deep-scan zones that should be dead don't trigger false patterns

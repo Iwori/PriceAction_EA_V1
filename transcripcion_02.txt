@@ -1,0 +1,194 @@
+0:01 Hola, ¿qué tal? Bueno, eh voy a hacer este vídeo cortito, ¿de acuerdo?
+0:05 Simplemente para eh ir al grano a ciertos aspectos. Estoy haciendo bact de
+0:10 la estrategia. Eh, efectivamente, el tema de las operaciones duplicadas está
+0:14 corregido porque aquí, por ejemplo, es una de las situaciones donde metía una
+0:17 compra y una venta simultáneas y y bueno, y ahora la compra, por ejemplo,
+0:22 no la ha metido, ha priorizado la venta, me imagino, porque será la primera que
+0:25 se activó, así que eso está bien. Aquí 2 4 6 8 10 12. Vale, aquí está, o sea,
+0:32 pasan más de 13 velas, o sea, que bien. Eh, quiero ir a estas dos operaciones.
+0:38 Eh, mira, esta es la 034. Esta de aquí, patrón dos y la siguiente es
+0:45 patrón dos también. Entonces, aquí, por ejemplo, abro un patrón dos y eh no
+0:50 entiendo muy bien por qué, porque claro, eso es una operación pendiente, por
+0:53 tanto, el patrón dos será esto, pero realmente eh aquí no sé si eso es una
+0:58 zona de interés, ¿de acuerdo? Parece que sí, porque hay vela alcista, bajista y
+1:01 alcista que quiebra. Esto es una zona de interés, pero eh bueno, y la vela
+1:06 siguiente, la que crea la zona de interés, no tiene capacidad para
+1:08 mitigar, por tanto está bien. Esta no esta mecha no mitiga, ¿de acuerdo? La
+1:13 zona de interés sigue entera, pero esta vela ya sí que tiene capacidad para
+1:17 mitigar y de hecho mitiga hasta aquí, hasta este punto que vemos que es eh, o
+1:25 sea, la zona que sigue vigente es este trocito de aquí.
+1:29 Vale, perdona. Y
+1:36 entonces y aquí el la vela bajista se mete dentro. Estas dos velas eh no
+1:42 tienen capacidad para mitigar con mecha, ¿de acuerdo? Eh, pero esta no está ni
+1:46 entre las dos anteriores ni es la siguiente anterior a la vela que crea el
+1:50 patrón. Por tanto, esta vela realmente su mitigación es correcta, se tiene que
+1:55 tener en cuenta y mitiga eh el trozo de zona donde se supone que se mete esta
+2:00 vela bajista. Por tanto, la zona no es válida, ese trozo de zona no es válido.
+2:05 Tendría que haber bajado un poquito más y haberse metido en este trozo, esta
+2:10 vela bajista, me refiero, en este trozo, ¿eh? Y a partir de ahí dar vela
+2:15 envolvente para que pudiese ser patrón dos. Por tanto, aquí no tenemos patrón
+2:17 dos y sin embargo, el robot lo ha abierto. ¿De acuerdo? Entonces, eh eso
+2:23 no está no está bien. Aquí, por ejemplo, sé que tenemos un patrón dos. El el la
+2:28 vela bajista se mete dentro de una zona de interés basada en punto estructural,
+2:31 en este caso, ¿de acuerdo? Que es esta vela. Se mete y da vela envolvente, pero
+2:35 se anularí. Ah, y no se anularía la entrada. ¿Por qué? Porque esto no es una
+2:39 zona de interés basada en punto estructural. ¿De acuerdo? porque no es
+2:44 un punto estructural, porque no ha habido espacio vacío todavía. Por tanto,
+2:48 viene eh cierra aquí por cierra en espacio libre, por así decirlo, o sea,
+2:53 sin tocar ninguna zona de interés. Y eh aquí sí que hubiésemos eh metido una
+2:59 compra que hubiese terminado siendo perdedora, pero el robot la ha metido
+3:03 antes de que esto suceda. Por tanto, ha tenido que ser con este patrón que no
+3:08 entiendo el por qué es un patrón dos. Eh,
+3:13 y aquí mete otro patrón dos que lo indica aquí. Presección e EAP2.
+3:19 Bueno, eh, la bajista alcista, pero aquí de nuevo no hay ninguna zona de interés.
+3:24 Es verdad que esto es una Ahí va, perdón. Eh,
+3:30 ah, sí, eh, es verdad que eso es una zona de interés basada en frenazo,
+3:35 ¿de acuerdo? Y aquí el precio rompe
+3:42 esta vela al alza, o sea, rompe el máximo
+3:48 alcanzado por esta vela bajista de frenazo. Y eh a partir de aquí se crea
+3:54 la zona de interés. Esta vela no tiene capacidad para mitigar la zona de
+3:57 interés por el tema de que es la siguiente a la vela que crea la zona de
+4:00 interés. Y estas velas ya pues sí, ¿eh? Y esta vela vemos que se adentra y la
+4:06 mitiga hasta este nivel. Por tanto, nuestra vela bajista que se adentra
+4:13 aquí, o sea, que que termina aquí, vemos que está en una zona de interés que ya
+4:18 ha sido mitigado, o sea, que no es válida, por tanto, no hay patrón dos.
+4:22 ¿Vale? Eh, es verdad que luego esto es una zona de interés,
+4:30 ¿vale? Pero aquí esto ya no tiene nada que ver
+4:33 con con nuestro patrón dos. Por tanto, aquí he abierto dos patrones dos que no
+4:39 son eh o sea, que no son válidos. Luego aquí he abierto eh dos patrones tres,
+4:44 que este no es válido. Este ya lo hablamos en el anterior
+4:49 vídeo, ¿de acuerdo? No, bueno, sí que es válido, perdón. Sí que es válido, pero
+4:54 no entiendo por qué abre tan arriba. Es lo único que que veo eh hm es lo que veo
+5:00 mal que abre de muy arriba, entonces eh no entiendo por qué, pero efectivamente
+5:07 es un patrón tres y hubiese sido perdedor. Pero el tema de las entradas,
+5:10 eso ya dijimos que había que revisarlo. Y
+5:15 aquí y aquí parece que ha abierto, bueno,
+5:19 parece no que lo pone aquí el 046. La operación número 8 es esta de aquí. Es
+5:25 un patrón tres, eh, pero no entiendo por qué, porque aquí tenemos esas zonas de
+5:34 interés basadas en frenazo, ¿vale? Pero el precio baja, eh, esta vela las crea,
+5:41 ¿de acuerdo? O bueno, vamos a poner esta por ser un poco más conservadores, eh,
+5:45 porque está visualmente no se ve bien si cierra por debajo, pero bueno. Eh, vamos
+5:50 a poner que rompe esta. Esta no tiene capacidad para mitigar, pero todas las
+5:54 demás sí. Y esta vela vemos que atraviesa completamente con cuerpo la
+5:58 zona de interés basada en frenazo, por tanto se anula completamente y luego
+6:02 aquí pues da vela bajista, alcista y bajista y luego una vela que rompe, o
+6:08 sea, es la formación del patrón tres, pero eh hm no está reaccionando ninguna
+6:14 zona de interés, ¿de acuerdo? O sea, esta vela, la que es la primera
+6:18 formación, no se mete en ninguna zona, por tanto, no hay patrón tres. Pero
+6:22 bueno, eh, aquí pasa lo mismo. De acuerdo.
+6:28 No sé dónde dónde está el patrón tres porque aquí no hay zona de interés.
+6:37 Vale. Ah, perdón. Eso es un patrón dos. Aquí
+6:48 lo que mete el robot el día 6 del 1 de 2025 a las 10:30 lo que mete es un
+6:54 patrón dos. Esta de aquí es para exena patrón. Entonces aún le veo menos
+6:59 sentido si lo que ha metido es un patrón dos. No entiendo por qué. No hay ninguna
+7:04 clase de patrón dos, no hay ninguna vela alcista que reaccione a una zona de
+7:08 interés y que a continuación vaya acompañada de una vela envolvente o doy
+7:12 más envolvente, eh, para poder abrir un patrón dos, entonces en venta. Entonces,
+7:18 no no lo sé, la verdad. Vale, aquí eh tenemos otro patrón dos,
+7:26 ¿de acuerdo? Que no está bien cogido. Es este de aquí, eh, 0,50.
+7:32 Ah, perdón. es este 0,52.
+7:37 Bueno, no sé cuál es la verdad, eh, de estos, pero bueno, el caso es que este
+7:43 patrón, esto, esta entrada tampoco existe porque no tenemos patrón dos ni
+7:48 tenemos patrón tres, o sea, no hay aquí no hay ninguna eh razón por la cual
+7:55 el robot de va a meter una operación límite, porque estamos hablando de que
+7:59 el mercado no ha hecho, o sea, debería haber lo primero una zona de interés
+8:03 bajista válida en la que el mercado se pueda apoyar para dar la vela
+8:08 envolvente en el caso de patrón 2 eh y en el caso de patrón 3 debería haber
+8:12 alguna vela, alguna zona de interés eh bajista que el robot pueda entrar,
+8:17 reaccionar y a continuación romper eh para
+8:22 luego pues poder dar la entrada y no sucede eso en ninguna de las de las dos
+8:27 situaciones. Entonces, no entiendo el por qué abre aquí una operación de
+8:31 venta, además de que el robot, el precio,
+8:37 perdón, ha cerrado en una zona de interés alcista bajista, perdón, una
+8:41 zona de interés bajista creada por este frenazo, ¿de acuerdo? eh alcista bajista
+8:47 más eh alcista más alcista más bajista y lo a continuación una vera que rompe.
+8:53 Entonces esto es una zona de interés basada en frenazo. Por tanto, supongamos
+8:57 que el patrón está aquí, que que lo dicho no sé dónde lo ha encontrado el
+9:01 robot, el patrón eh ha cerrado dentro de una zona de interés, por tanto, la
+9:08 entrada se anula, ¿de acuerdo? O sea, la vuelta se se anula y ha cerrado dentro
+9:13 de una zona de interés la eh la vela alcista que ha cerrado más alto, ¿de
+9:20 acuerdo? Que es esta de aquí, eh de entre el patrón y la entrada. Eh, y
+9:25 luego, además, en el caso de que efectivamente hubiese patrón,
+9:30 la ha cerrado ha cerrado mal el trailing stop, ¿de acuerdo? Eh, porque imaginemos
+9:35 que este patrón es válido. Bueno, vale, pues el precio avanza, ta tal, y lo ha
+9:39 cerrado en la última zona de interés válida, ¿de acuerdo? No en la penúltima,
+9:44 que la penúltima, bueno, la penúltima sería esta porque realmente esta zona y
+9:49 esta se solapan. Por tanto, eh, la última realmente llega hasta aquí.
+9:55 O sea, el robot debería haber cerrado, en el caso de que tome la última zona,
+9:59 debería de haber cerrado aquí y tomando la penúltima, eh, aquí. Entonces, eh,
+10:04 pues no sé, y lo ha cerrado aquí en esta en esta zona y no entiendo muy bien el
+10:11 por qué. Eh, vemos que efectivamente cumpliendo con lo de eh la penúltima
+10:18 zona de interés eh se hubiese ido a take profit. Entonces, bueno,
+10:24 hm aquí ha metido esta venta. Esto ya lo
+10:31 revisamos. Ah, bueno, ya. Ah, bueno, aquí he metido una venta, ¿vale? Que es
+10:35 válido porque eh no han pasado 13 velas, pero no hace falta porque es una
+10:40 operación ganadora. Entonces, aunque eso sí que podría ser
+10:45 un patrón dos, porque tenemos aquí esta zona de interés, ¿vale?, que vemos
+10:53 que eh ojo, coincide justo con la línea roja, el extremo de la zona de interés.
+10:59 Eh, es una zona de interés basada en frenazo, ¿de acuerdo? El precio viene y
+11:04 eh bueno, aquí no consigue romper, aquí
+11:10 rompe al alza, ¿de acuerdo? Entonces esta es invalida.
+11:14 Ah, perdón, un segundo. Vale, eso sí que es una zona de interés
+11:18 porque cumple con el el hecho de que tiene dos bajistas, alcista y bajista,
+11:25 eh, y que rompe. ¿De acuerdo? Y como son como tiene dos alcistas eh dos bajistas,
+11:31 perdón, la alcista no importa de qué tamaño sea su cuerpo. Y además eh la
+11:35 regla que te pedí ayer que implementase será en el caso de eh vela vela bajista,
+11:41 ¿de acuerdo? Anterior. Así que bueno, eh esto es una zona de interés que como
+11:46 digo, termina justo aquí y justo aquí hay otra zona de interés. Entonces,
+11:49 bueno, un poco como que se solaparían y el precio cierra. Bueno, no sé muy bien
+11:54 dónde cierra, si dentro de esta o dentro de esta, pero bueno, en cualquier caso
+11:58 habría eh una vela alcista que cierra dentro de una zona de interés y luego es
+12:04 que no se ve bien. Eh,
+12:08 parece que no hay patrón dos porque parece que esto es una vela eh bajista
+12:12 ya, que no consigue superar el precio de la vela anterior. Entonces parece que no
+12:17 hay patrón dos, pero aún así, incluso aunque lo hubiese, esa entrada está mal
+12:21 colocada, ¿eh? Y no sé tampoco no se me ocurre parece
+12:28 que es un parece que que abrí un patrón dos, pero es que no entiendo el por qué,
+12:31 la verdad. Entonces, bueno, eh no me quiero enrollar más.
+12:37 Mm problemas en la identificación del
+12:44 en la identificación del patrón dos, ¿de acuerdo? y en la identificación del
+12:49 patrón tres. Pero bueno, si quieres primero intentamos arreglar la
+12:52 identificación del patrón dos y luego ya eh vamos a por la del patrón tres.
+12:58 Aquí, mira, que sin embargo sí que había un patrón dos,
+13:02 ¿vale? Tenemos zona de interés basada en punto estructural. El precio se adentra
+13:06 con vela bajista y da envolvente. Cierra dentro de esta zona de interés basada en
+13:10 frenazo, ¿vale? Pero no importa porque, o sea, no la podríamos abrir
+13:15 inmediatamente aquí porque ha cerrado dentro de una zona de interés bajista,
+13:19 ¿de acuerdo? Y estamos buscando compras. Pero bueno, eh, no pasa nada.
+13:22 Esperaríamos a que el precio, a que la última vela, a que la vela alcista que
+13:27 ha cerrado más alto, eh, lo haga fuera de una zona de interés, que es esta, ¿de
+13:32 acuerdo? En cuanto esperamos que el precio avance y aquí ya eh como está
+13:36 cerrado dentro, pues bueno, en este retroceso podemos abrir la entrada. Esto
+13:42 lo iría por aquí debajo y hm como no puedo trazar Fibonacci aquí en el back
+13:46 testing, pues bueno, no sé si la activo, pero yo creo que seguro que esta
+13:50 operación se activaría. Eh, y aquí tendríamos esta operación de compra que
+13:55 sería ganadora y sin embargo ha metido una operación de compra aquí, que no
+13:59 entiendo por qué, y luego otra operación de compra aquí.
+14:03 Eh, hm, ha metido dos operaciones de compra
+14:08 y no sé si y no parece que esta haya tocado stop loss. Entonces,
+14:14 eh, es que esta no sé de dónde a dónde va.
+14:21 Bueno, eh, no sé, la verdad. Ah, perdón, perdón, perdón. Esto no
+14:29 vale, no la ha abierto, lo siento, no la ha abierto porque aquí ha metido esa
+14:33 operación de venta que la cierra aquí en Break even, ¿de acuerdo? Por eso no abre
+14:36 esa operación y luego abre esta operación en compra.
+14:57 que es un patrón, esta operación en compra es un patrón dos de este patrón
+15:01 de aquí, pero no cierra dentro de una zona de interés, ¿de acuerdo? Porque
+15:07 esto si aplicamos la regla que te pedí ayer Ah, perdón, sí, sí que es zona de
+15:13 interés. Sí, sí que es zona de interés, perdón. Eh, cierra dentro, da
+15:17 envolvente. Eh, efectivamente, sí, esto no hay
+15:21 interés, patrón dos, pero cierra dentro de esta zona de Pero estas esta vela que
+15:26 es la más alta de que es la más alta alcista, la que cierra más alto de las
+15:31 velas alcistas en este en el impulso, eh, cierra dentro de una zona de interés
+15:36 bajista basada en frenazo, que es esta, y estas dos velas. ¿Por qué? Porque como
+15:41 esta es bajista también no hay límite en cuánto se pueden extender. Por tanto,
+15:45 hay toda una zona de interés bajista muy grande que es desde aquí hasta aquí. ¿De
+15:51 acuerdo? Todo esto. Por tanto, eh no puede el robot meter la operación,
+15:57 ¿eh? Así que pues bueno, no hay operación de compra, la verdad. Eh, si
+16:02 eso habría una operación de venta aquí por un patrón, por este patrón dos
+16:06 inverso que no sé si se activaría o no. No sé si lo estás viendo igual que lo
+16:10 veo yo, pero bueno, operación de compra aquí no puede haber. Y aquí esta
+16:15 operación de venta está mal puesta 100% porque aquí esta vela mitiga todas las
+16:22 todas las zonas que pueda haber aquí y aquí no se puede generar ninguna
+16:27 operación de venta, ¿de acuerdo? Ninguna puede estar a este nivel. Entonces, eh
+16:32 bueno, eso es lo que yo veo en este back
+16:36 testing.

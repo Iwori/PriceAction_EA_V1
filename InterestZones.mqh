@@ -558,6 +558,79 @@ void ProcessBrakePending()
 }
 
 //+------------------------------------------------------------------+
+//| Process pending brakes retroactively during deep scan (bar 1)      |
+//| Scans all bars between each formation and bar[1] to find the       |
+//| correct historical confirmation or invalidation point.             |
+//| Fixes ghost zones that appear at bar[1] on backtest start.         |
+//+------------------------------------------------------------------+
+void ProcessBrakePendingHistorical()
+{
+   if(g_brake_count <= 0) return;
+   
+   int available = iBars(_Symbol, PERIOD_CURRENT);
+   
+   for(int i = 0; i < g_brake_count; i++)
+   {
+      if(!g_brake_pending[i].is_valid) continue;
+      
+      // Find the shift of the last candle in the formation
+      int last_form_shift = iBarShift(_Symbol, PERIOD_CURRENT, g_brake_pending[i].time_last);
+      if(last_form_shift < 0 || last_form_shift >= available)
+      {
+         g_brake_pending[i].is_valid = false;
+         continue;
+      }
+      
+      // Scan from bar after formation to bar[1] in chronological order
+      for(int s = last_form_shift - 1; s >= 1; s--)
+      {
+         double bar_close = iClose(_Symbol, PERIOD_CURRENT, s);
+         datetime bar_time = iTime(_Symbol, PERIOD_CURRENT, s);
+         
+         if(g_brake_pending[i].direction == DIR_BULLISH)
+         {
+            if(bar_close > g_brake_pending[i].brake_high)
+            {
+               // Confirmed at correct historical bar
+               RegisterZone(DIR_BULLISH, ZI_BASE_BRAKE,
+                            g_brake_pending[i].zone_upper, g_brake_pending[i].zone_lower,
+                            s, bar_time, -1, false);
+               g_brake_pending[i].is_valid = false;
+               g_logger.Log("BRAKE", StringFormat("OK|#%d|B|hb%d", i, s));
+               break;
+            }
+            else if(bar_close < g_brake_pending[i].brake_close_limit)
+            {
+               // Invalidated historically
+               g_brake_pending[i].is_valid = false;
+               g_logger.Log("BRAKE", StringFormat("KA|#%d|B|hb%d", i, s));
+               break;
+            }
+         }
+         else // DIR_BEARISH
+         {
+            if(bar_close < g_brake_pending[i].brake_low)
+            {
+               RegisterZone(DIR_BEARISH, ZI_BASE_BRAKE,
+                            g_brake_pending[i].zone_upper, g_brake_pending[i].zone_lower,
+                            s, bar_time, -1, false);
+               g_brake_pending[i].is_valid = false;
+               g_logger.Log("BRAKE", StringFormat("OK|#%d|R|hb%d", i, s));
+               break;
+            }
+            else if(bar_close > g_brake_pending[i].brake_close_limit)
+            {
+               g_brake_pending[i].is_valid = false;
+               g_logger.Log("BRAKE", StringFormat("KA|#%d|R|hb%d", i, s));
+               break;
+            }
+         }
+      }
+      // If not resolved: brake stays pending for future bars
+   }
+}
+
+//+------------------------------------------------------------------+
 //| Update mitigation status for all zones using bar[1]                |
 //| Handles partial and complete mitigation                            |
 //+------------------------------------------------------------------+

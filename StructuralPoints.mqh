@@ -333,7 +333,7 @@ bool IsPEAlreadyRegistered(datetime time_first, datetime time_last, ENUM_DIRECTI
 {
    for(int i = 0; i < g_pe_count; i++)
    {
-      if(!g_pe_array[i].is_valid) continue;
+      // Check ALL PEs including expired/invalid to prevent re-detection
       if(g_pe_array[i].time_first == time_first &&
          g_pe_array[i].time_last  == time_last  &&
          g_pe_array[i].direction  == dir)
